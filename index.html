@@ -1,82 +1,85 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Pastel Firebase App</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .card {
-      background: #ffffffcc;
-      backdrop-filter: blur(10px);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      text-align: center;
-      width: 320px;
-    }
-
-    h1 {
-      color: #6a7fdc;
-      margin-bottom: 15px;
-    }
-
-    input {
-      padding: 10px;
-      width: 90%;
-      margin: 8px 0;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #a6c1ee;
-    }
-
-    button {
-      background: #a6c1ee;
-      color: #fff;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
-    }
-
-    button:hover {
-      background: #8eaef0;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Управление данными</title>
+<style>
+body{
+  font-family: 'Inter', sans-serif; 
+  background: #f4f7f6; 
+  display:flex; 
+  flex-direction:column; 
+  align-items:center; 
+  padding:20px;
+}
+.container{
+  width:100%; 
+  max-width:500px; 
+  background:white; 
+  padding:25px; 
+  border-radius:12px; 
+  box-shadow:0 4px 15px rgba(0,0,0,0.05);
+}
+input{
+  width:100%; 
+  padding:12px; 
+  margin:8px 0; 
+  border:1px solid #ddd; 
+  border-radius:6px; 
+  box-sizing:border-box;
+}
+button#mainBtn{
+  background:#007bff; 
+  color:white; 
+  border:none; 
+  padding:12px; 
+  border-radius:6px; 
+  width:100%; 
+  font-weight:600; 
+  cursor:pointer; 
+  transition:0.3s;
+}
+.post{
+  background:#fff; 
+  border:1px solid #eaeaea; 
+  padding:15px; 
+  margin-top:15px; 
+  border-radius:8px; 
+  width:100%; 
+  max-width:500px; 
+  position:relative;
+}
+.like-btn{
+  cursor:pointer; 
+  border:none; 
+  background:#f8f9fa; 
+  padding:5px 12px; 
+  border-radius:20px; 
+  font-size:14px; 
+  transition:0.25s;
+}
+.like-btn:hover{background:#e2e2ea;}
+.time{font-size:11px; color:#999; float:right;}
+</style>
 </head>
-
 <body>
 
-  <div class="card">
-    <h1>🌸 Мой сайт</h1>
+<div class="container">
+  <h3>Панель управления данными</h3>
+  <input type="text" id="name" placeholder="Имя профиля">
+  <input type="email" id="email" placeholder="Рабочий Email">
+  <button id="mainBtn">Опубликовать в облако</button>
+</div>
 
-    <input type="text" id="name" placeholder="Имя">
-    <input type="email" id="email" placeholder="Email">
+<div id="feed" style="width:100%; max-width:500px;"></div>
 
-    <button onclick="saveData()">Сохранить</button>
-  </div>
+<script type="module">
+// Подключение Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
+// ======= ВАШИ ДАННЫЕ FIREBASE =======
+const firebaseConfig = {
       apiKey: "AIzaSyAFHk-knWEcXEoSjpk3WfdtbD2M0eU7DC4",
       authDomain: "meow-77104.firebaseapp.com",
       projectId: "meow-77104",
@@ -84,33 +87,69 @@
       messagingSenderId: "584355394282",
       appId: "1:584355394282:web:e6ce82386817cfae6ddd93"
     };
+// ====================================
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    window.saveData = async function () {
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
+// ======= Атомарное увеличение лайков =======
+window.processLike = async (id) => {
+  const docRef = doc(db, "requests", id);
+  try {
+    await updateDoc(docRef, { likes: increment(1) });
+  } catch (e) {
+    console.error("Ошибка при лайке:", e.message);
+  }
+};
 
-      if (!name || !email) {
-        alert("Заполни все поля!");
-        return;
-      }
+// ======= Добавление нового запроса =======
+document.getElementById("mainBtn").onclick = async () => {
+  const btn = document.getElementById('mainBtn');
+  btn.disabled = true;
 
-      try {
-        await addDoc(collection(db, "users"), {
-          name: name,
-          email: email,
-          createdAt: new Date()
-        });
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
 
-        alert("Сохранено 🌸");
-      } catch (e) {
-        console.error(e);
-        alert("Ошибка!");
-      }
-    };
-  </script>
+  if(name.length <= 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    alert("Введите корректное имя и email!");
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "requests"), {
+      name: name,
+      email: email,
+      likes: 0,
+      timestamp: serverTimestamp()
+    });
+    document.getElementById('name').value = "";
+    document.getElementById('email').value = "";
+  } catch (e) {
+    alert("Ошибка безопасности: данные отклонены сервером.");
+  }
+
+  btn.disabled = false;
+};
+
+// ======= Реактивная лента сообщений =======
+const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
+onSnapshot(q, (snapshot) => {
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    feed.innerHTML += `
+      <div class="post">
+        <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || ""}</span>
+        <b>${data.name}</b>
+        <p>${data.email}</p>
+        <button class="like-btn" onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
+      </div>
+    `;
+  });
+});
+</script>
 
 </body>
 </html>
