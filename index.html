@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>My Firebase Pink App</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 300px;
+    }
+
+    h1 {
+      color: #ff4d88;
+    }
+
+    input {
+      padding: 10px;
+      width: 90%;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #ff4d88;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #e6005c;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>💖 Мой сайт</h1>
+    <input type="text" id="name" placeholder="Введите имя">
+    <button onclick="saveData()">Сохранить</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 🔥 ВСТАВЬ СВОЙ firebaseConfig СЮДА
+ const firebaseConfig = {
+  apiKey: "AIzaSyAFHk-knWEcXEoSjpk3WfdtbD2M0eU7DC4",
+  authDomain: "meow-77104.firebaseapp.com",
+  projectId: "meow-77104",
+  storageBucket: "meow-77104.firebasestorage.app",
+  messagingSenderId: "584355394282",
+  appId: "1:584355394282:web:e6ce82386817cfae6ddd93"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.saveData = async function () {
+      const name = document.getElementById("name").value;
+
+      if (!name) {
+        alert("Введите имя!");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "users"), {
+          name: name,
+          createdAt: new Date()
+        });
+
+        alert("Сохранено в Firebase 🎉");
+      } catch (e) {
+        console.error(e);
+        alert("Ошибка!");
+      }
+    };
+  </script>
+
+</body>
+</html>
